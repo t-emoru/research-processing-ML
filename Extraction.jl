@@ -111,13 +111,6 @@ module Extraction
 
 
 
-
-
-
-
-
-
-
     # Remanants [use as referenece in redesigning]
     function extraction_content(status, response)
 

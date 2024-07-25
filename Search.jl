@@ -13,45 +13,62 @@ module Search
 
     
     # EXPORT DEFINITIONS
+    export URL_search
     export GOOGLE_search
     export STEM_search
     export MEDIA_search
     export prompt_gen
     export request_access
+    
+    export TaggedData
+    export tagged_print
 
-    #Initialzing TaggedData Struct/Datatype
-        "
-        Function: Custom Datatpye that stores a specific websites url & HTML data as well ats creation and storage date.
-        "
-    struct TaggedData
-        url::String
-        search_results::String
-        created_at::DateTime
+
+    # RELEVANT OBJECTS 
+    mutable struct TaggedData
+        data::Any
+        created_at::Union{DateTime, Nothing}
         stored_at::DateTime
         other_tags::Dict{String, Any}
     
-        # Inner Constructor
-        
-        function TaggedData(url::String, search_results::String, created_at::DateTime, stored_at::DateTime, other_tags::Dict{String, Any}=Dict{String, Any}())
+        # Single Constructor
+        function TaggedData(data::Any, created_at::Union{DateTime, Nothing}; other_tags=Dict{String, Any}())
+            
             # Potential validation: Ensure created_at is not in the future
-            if created_at > now()
+            if created_at !== nothing && created_at > now()
                 error("created_at cannot be in the future")
             end
-            new(url, search_results, created_at, stored_at, other_tags)
-        end
-    
-       
-        function TaggedData(url::String, search_results::String, created_at::DateTime; other_tags=Dict{String, Any}())
+
+
             stored_at = now()
-            new(url, search_results, created_at, stored_at, other_tags)
+            new(data, created_at, stored_at, other_tags)
+        end
+
+
+
+    end
+        
+    
+    function tagged_print(tagged_data::TaggedData)
+        println("TaggedData Details:")
+        println("  Data: ", length(string(tagged_data.data)) > 10 ? string(tagged_data.data)[1:10] * "..." : tagged_data.data)
+        println("  Created at: ", tagged_data.created_at)
+        println("  Stored at: ", tagged_data.stored_at)
+        println("  Other tags:")
+        for (key, value) in tagged_data.other_tags
+            println("    ", key, ": ", value)
         end
     end
-    
-    # FUNCTION CONSTANTS
+
 
 
 
     # FUNCTION DEFINITIONS
+
+    function URL_search(query::String)
+        return 0
+    end
+
     function GOOGLE_search(query::String, pages::Int=1)
         "
         Function: searches google using default query.
@@ -83,12 +100,12 @@ module Search
             search_result = HTTP.get(url, query=params, headers=headers, cookies=cookiejar)
 
             #Create TaggedData instances
-            created_at = now() # Assuming the current time as the creation time will change later
-            search_results = String(search_result.body)  # Convert response body to string
-            tagged_data = TaggedData(url, search_results, created_at)
+
+            data = TaggedData(search_result, nothing, other_tags=Dict("url" => url))
+
 
             # Append the result to the list
-            push!(results, tagged_data)
+            push!(results, data)
         end
 
         return results
@@ -106,7 +123,8 @@ module Search
 
 
         # Action Modularization
-        function fetch_search_results(url, query, start_param, pages)
+        function fetch_search_results(w_url, query, start_param, pages)
+            url = w_url * query
             headers = Dict("User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
             cookiejar = CookieJar()
             results = []
@@ -115,7 +133,9 @@ module Search
                 start_index = page * 10
                 params = Dict(query => query, start_param => string(start_index))
                 search_result = HTTP.get(url, query=params, headers=headers, cookies=cookiejar)
-                push!(results, search_result)
+                
+                data = TaggedData(search_result, nothing, other_tags=Dict("url" => url))
+                push!(results, data)
             end
 
             return results
@@ -159,8 +179,8 @@ module Search
         
             # Combined function for Reddit operations
             # Query = search query and name of subreddit determining on mode
-            # Search = returns an Array of HTML Content
-            # Posts = returns an Array of Dicts Content
+            # Search = returns an Array of TAGGED HTML Content
+            # Posts = returns an Array of TAGGED Dicts Content
     
         function REDDIT(mode::String, query::String, pages::Int=1, limit::Int=25)
             
@@ -173,12 +193,14 @@ module Search
                 results = []
                 
                 for page in 1:pages
-                    search_url = "$(base_url)$(HTTP.escapeuri(query))&page=$(page)"
-                    response = HTTP.get(search_url, headers=headers)
+                    url = "$(base_url)$(HTTP.escapeuri(query))&page=$(page)"
+                    response = HTTP.get(url, headers=headers)
                     
                     if HTTP.status(response) == 200
                         parsed_html = Gumbo.parsehtml(String(response.body))
-                        push!(results, parsed_html)
+                        data = TaggedData(parsed_html, nothing, other_tags=Dict("url" => url))
+
+                        push!(results, data)
                     else
                         println("Failed to fetch the page: Status code ", HTTP.status(response))
                     end
@@ -186,31 +208,37 @@ module Search
         
                 return results
                 
+            # QUERY MUST BE A SUBREDDIT
             elseif mode == "posts"
-                # Functionality for fetching posts from a specific subreddit
-                url = "https://www.reddit.com/r/$(query)/new.json?limit=$(limit)"
+                encoded_query = HTTP.escapeuri(query)
+                url = "https://www.reddit.com/r/$(encoded_query)/new.json?limit=$(limit)"
                 response = HTTP.get(url, headers=headers)
                 post_details = []
-                
+
                 if HTTP.status(response) == 200
-                    posts = JSON.parse(String(response.body))
-                    
-                    for post in posts["data"]["children"]
-                        title = post["data"]["title"]
-                        url = post["data"]["url"]
-                        permalink = "https://www.reddit.com" * post["data"]["permalink"]
-                        push!(post_details, Dict("title" => title, "url" => url, "permalink" => permalink))
+                    json_response = JSON.parse(String(response.body))
+
+                    for post in json_response["data"]["children"]
+                        post_data = post["data"]
+                        title = post_data["title"]
+                        url = post_data["url"]
+                        permalink = "https://www.reddit.com" * post_data["permalink"]
+                        
+                        post_info = Dict("title" => title, "url" => url, "permalink" => permalink)
+                        data = TaggedData(post_info, nothing, other_tags=Dict("url" => url))
+                        push!(post_details, data)
                     end
                 else
                     println("Failed to fetch posts: Status code ", HTTP.status(response))
                 end
-        
+
                 return post_details
-                
+
             else
                 println("Invalid mode. Please choose 'search' or 'posts'.")
             end
         end
+
         
         return REDDIT(mode, query, pages, limit)
     

@@ -64,14 +64,12 @@ Cummulative Algorithm Function:
 include("SETUP.jl")
 
 include("Search.jl")
-include("Extraction.jl")
-include("Analysis.jl")
-
-
-
 using .Search
+include("Extraction.jl")
 using .Extraction
+include("Analysis.jl")
 using .Analysis
+
 
 # move this somehow? for testing leave here
 using HTTP, Gumbo
@@ -82,6 +80,7 @@ using Cascadia
 using DataFrames
 using CSV
 using Gumbo
+using Dates
 
 #-------------------------------------------------------------------------------
 # current testing block from old file
@@ -92,27 +91,48 @@ using Gumbo
 
 
 
-## 1. Initial Search for Companies
-query = " stock markets most profitable companies"
+### SEARCH TESTING
+query = "stocks"
 
-### - Obtain Search Result URLS
-raw = GOOGLE_search(query)
-for tagged_data in raw
-    println("URL: ", tagged_data.url)
-    println("Search Results: ", tagged_data.search_results)
-    println("Created At: ", tagged_data.created_at)
-    println("Stored At: ", tagged_data.stored_at)
-    println("Other Tags: ", tagged_data.other_tags)
-    println(" ")
-end
-parsed = parsehtml(String(raw[1]))
+## - Obtain Search Result URLS
+raw = Search.GOOGLE_search(query, 3)
+raww = Search.STEM_search(query, 3)
+rawww = Search.MEDIA_search("search", query, 3)
+rawwww = Search.MEDIA_search("posts", query, 3) # QUERY MUST BE A SUBREDDIT NAME
+
+## - looking at the first result
+Search.tagged_print(raw[1])
+Search.tagged_print(raww[1][1])
+Search.tagged_print(rawww[1])
+Search.tagged_print(rawwww[1])
+
+
+
+
+
+
+### EXTRACTION TESTING
+"due to varrying data types for tagged data, extraction has to consider this condition"
+
+## - data formatting 
+raw[1].data
+raww[1][1].data
+rawww[1].data
+
+
+
+
+parsed = parsehtml(string(raw[1].data))
 body = parsed.root[2]
 
 
+## - next stage data extraction
 
-urls = extraction_url(body)
 
-# Extraction
+
+
+
+
 
 
 # Analysis
