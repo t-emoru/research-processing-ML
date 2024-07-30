@@ -51,62 +51,25 @@ module Extraction
         for elem in PreOrderDFS(body)
 
             try
-                # println(tag(elem))  -  creates tree
+                println(tag(elem))  #  creates tree
                 if tag(elem) == :a
                     push!(raw_URLs, elem)
 
-                    href = getattr(elem, "href")
-                    push!(dirty_URLs, href)
+                    # href = getattr(elem, "href")
+                    # push!(dirty_URLs, href)
 
 
                 end
 
             catch
-                println("")
+                println("error")
             end
 
         end
 
 
-
-        # # Acquiring "Clean" URLs
-        # for urls in dirty_URLs
-        #     matches = eachmatch(url_pattern, urls)
-
-        #     if !isempty(matches)
-        #         url = first(matches).match
-        #         push!(clean_URLs, url)
-        #     else
-        #         println("No URL found in the input string.")
-        #     end
-
-        # end
-
-
-
-        # ## Filtering Useless Clean URLs
-        # "If it contains 'google' or doesn't equal 200"
-        # for str in clean_URLs
-
-        #     if !occursin("google", str)
-
-        #         try
-        #             if HTTP.status(HTTP.request("GET", str)) == 200
-        #                 push!(filtered_urls, str)
-
-        #             end
-
-        #         catch
-        #             println("Can not access site")
-        #         end
-
-        #     end
-        # end
-
         
-
-        
-        return 1
+        return raw_URLs
     end
 
 

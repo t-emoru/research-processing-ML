@@ -65,8 +65,11 @@ include("SETUP.jl")
 
 include("Search.jl")
 using .Search
+
 include("Extraction.jl")
 using .Extraction
+
+
 include("Analysis.jl")
 using .Analysis
 
@@ -92,7 +95,7 @@ using Dates
 
 
 ### SEARCH TESTING
-query = "stocks"
+query = "best stocks"
 
 ## - Obtain Search Result URLS
 raw = Search.GOOGLE_search(query, 3)
@@ -101,7 +104,7 @@ rawww = Search.MEDIA_search("search", query, 3)
 rawwww = Search.MEDIA_search("posts", query, 3) # QUERY MUST BE A SUBREDDIT NAME
 
 ## - looking at the first result
-Search.tagged_print(raw[1])
+Search.tagged_print(raw[2])
 Search.tagged_print(raww[1][1])
 Search.tagged_print(rawww[1])
 Search.tagged_print(rawwww[1])
@@ -116,17 +119,140 @@ Search.tagged_print(rawwww[1])
 
 ## - data formatting 
 raw[1].data
-raww[1][1].data
-rawww[1].data
+parsed = parsehtml(string(raw[2].data))
+input = parsed.root
 
 
-
-
-parsed = parsehtml(string(raw[1].data))
-body = parsed.root[2]
 
 
 ## - next stage data extraction
+
+
+# doesnt go deep enough into the HTML Structure
+function version1(body::HTMLElement)
+
+
+    for elem in PostOrderDFS(body) 
+
+        try
+            println(typeof(elem))
+            
+            # Process the current node (e.g., extract URL if applicable)
+            # Example (pseudo-code, adjust to your actual use case):
+            # url = extract_url(node)
+            # push!(clean_URLs, url) if url
+    
+            # Recursively process children
+    
+    
+            try 
+                d_elem = elem.children
+    
+                # if length(d_elem) > 0
+                    println(length(d_elem))
+    
+                    for i in eachindex(d_elem)
+                        println("   ", typeof(d_elem[i]))
+                        # println("done with this node")
+    
+                    end
+                # end
+    
+            
+            catch er
+                println("error: $er")
+                nothing
+            end 
+    
+            
+            println("   ")
+    
+            
+        catch er
+            println("error: $er")
+            println("   ")
+    
+        end
+
+    end
+
+
+    return 0
+end
+
+# doesnt go deep enough into the HTML Structure
+function version2(body::HTMLElement)
+    
+    urls_new = []
+
+    for elem in PreOrderDFS(body)
+
+        try
+            println(typeof(elem))
+
+            push!(urls_new, elem)
+
+
+
+            try 
+                d_elem = elem.children
+    
+
+    
+            
+            catch er
+                println("error: $er")
+                nothing
+            end 
+
+
+        catch
+            println("")
+        end
+
+    end
+
+    return urls_new
+
+end
+
+# PreOrderDFS can be called again to go deeper into node 
+# Recursively enter each node (that may be in a HTMLvector) till there is no children while checking for atags
+
+
+
+# trying yo view the tree
+
+# how deep does DFS go? - all the way in, so why does it work for google search?
+
+
+"
+potential solutions 
+
+revisit intial code structure in main file
+
+redesign functions from scratch 
+      with DFS (recurrsion)  - SOMMY
+      without DFS ~ (hardcode) - TOMI
+
+
+"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
