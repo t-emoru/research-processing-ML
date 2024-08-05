@@ -740,11 +740,11 @@ end
 query = "stock markets most profitable companies"
 
 ### - Obtain Search Result URLS
-search_data_raw = google_search(query)
-search_data_parsed = parsehtml(String(search_data_raw))
+search_data_raw = google_search(query, 1)
+search_data_parsed = parsehtml(String(search_data_raw[1]))
 body = search_data_parsed.root[2]
 
-urls = extract_url(body)
+urls = extraction_url(body)
 "Add: 
     urls that produce a negative login 
 
@@ -1037,4 +1037,97 @@ function oldSTEM_search(query, pages)
     return [google_scohlar_results, pubMed_results, WOS_results]
 
 end
+
+# doesnt go deep enough into the HTML Structure
+function version1(body::HTMLElement)
+
+
+    for elem in PostOrderDFS(body) 
+
+        try
+            println(typeof(elem))
+            
+            # Process the current node (e.g., extract URL if applicable)
+            # Example (pseudo-code, adjust to your actual use case):
+            # url = extract_url(node)
+            # push!(clean_URLs, url) if url
+    
+            # Recursively process children
+    
+    
+            try 
+                d_elem = elem.children
+    
+                # if length(d_elem) > 0
+                    println(length(d_elem))
+    
+                    for i in eachindex(d_elem)
+                        println("   ", typeof(d_elem[i]))
+                        # println("done with this node")
+    
+                    end
+                # end
+    
+            
+            catch er
+                println("error: $er")
+                nothing
+            end 
+    
+            
+            println("   ")
+    
+            
+        catch er
+            println("error: $er")
+            println("   ")
+    
+        end
+
+    end
+
+
+    return 0
+end
+
+# doesnt go deep enough into the HTML Structure
+function version2(body::HTMLElement)
+    
+    urls_new = []
+
+    for elem in PreOrderDFS(body)
+
+        try
+            println(typeof(elem))
+
+            push!(urls_new, elem)
+
+
+
+            try 
+                d_elem = elem.children
+    
+
+    
+            
+            catch er
+                println("error: $er")
+                nothing
+            end 
+
+
+        catch
+            println("")
+        end
+
+    end
+
+    return urls_new
+
+end
+
+# PreOrderDFS can be called again to go deeper into node 
+# Recursively enter each node (that may be in a HTMLvector) till there is no children while checking for atags
+
+
 

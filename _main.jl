@@ -95,16 +95,16 @@ using Dates
 
 
 ### SEARCH TESTING
-query = "best stocks"
+query = "stock markets most profitable companies"
 
 ## - Obtain Search Result URLS
-raw = Search.GOOGLE_search(query, 3)
+raw = Search.GOOGLE_search(query, 1)
 raww = Search.STEM_search(query, 3)
 rawww = Search.MEDIA_search("search", query, 3)
 rawwww = Search.MEDIA_search("posts", query, 3) # QUERY MUST BE A SUBREDDIT NAME
 
 ## - looking at the first result
-Search.tagged_print(raw[2])
+Search.tagged_print(raw[1])
 Search.tagged_print(raww[1][1])
 Search.tagged_print(rawww[1])
 Search.tagged_print(rawwww[1])
@@ -119,92 +119,49 @@ Search.tagged_print(rawwww[1])
 
 ## - data formatting 
 raw[1].data
-parsed = parsehtml(string(raw[2].data))
-input = parsed.root
+parsed = parsehtml(String(raw[1].data))
+input = parsed.root[2]
 
 
 
 
-## - next stage data extraction
+# YAYY It fucking works
+# now work on filterring urls! YAYY
+function version3(body)
 
-
-# doesnt go deep enough into the HTML Structure
-function version1(body::HTMLElement)
-
-
-    for elem in PostOrderDFS(body) 
-
-        try
-            println(typeof(elem))
-            
-            # Process the current node (e.g., extract URL if applicable)
-            # Example (pseudo-code, adjust to your actual use case):
-            # url = extract_url(node)
-            # push!(clean_URLs, url) if url
+    "
+    Function: extraxts url from html content
+    Return: Clean Urls
     
-            # Recursively process children
-    
-    
-            try 
-                d_elem = elem.children
-    
-                # if length(d_elem) > 0
-                    println(length(d_elem))
-    
-                    for i in eachindex(d_elem)
-                        println("   ", typeof(d_elem[i]))
-                        # println("done with this node")
-    
-                    end
-                # end
-    
-            
-            catch er
-                println("error: $er")
-                nothing
-            end 
-    
-            
-            println("   ")
-    
-            
-        catch er
-            println("error: $er")
-            println("   ")
-    
-        end
-
-    end
+    potentional refinement: import beautifulsoup4 python functions using
+    https://gist.github.com/genkuroki/c26f22d3a06a69f917fc98bb07c5c90c
+    "
 
 
-    return 0
-end
+    #URL Types
+    raw_URLs = [] # contain anchor tags
+    dirty_URLs = []
+    clean_URLs = []
+    filtered_urls = []
+    url_pattern = r"(https?://[^&]+)" # Pattern for cleaning urls
 
-# doesnt go deep enough into the HTML Structure
-function version2(body::HTMLElement)
-    
-    urls_new = []
 
+    # Acquiring "Dirty" & "raw" URLs
+    " 
+    Optimize: try using the built in 'eachmatch' function
+    "
     for elem in PreOrderDFS(body)
 
         try
-            println(typeof(elem))
+            # println(tag(elem))  -  creates tree
+            if tag(elem) == :a
+                push!(raw_URLs, elem)
 
-            push!(urls_new, elem)
+                href = getattr(elem, "href")
+                push!(dirty_URLs, href)
 
 
-
-            try 
-                d_elem = elem.children
-    
-
-    
-            
-            catch er
-                println("error: $er")
-                nothing
-            end 
-
+            end
 
         catch
             println("")
@@ -212,13 +169,51 @@ function version2(body::HTMLElement)
 
     end
 
-    return urls_new
 
+
+    # # Acquiring "Clean" URLs
+    # for urls in dirty_URLs
+    #     matches = eachmatch(url_pattern, urls)
+
+    #     if !isempty(matches)
+    #         url = first(matches).match
+    #         push!(clean_URLs, url)
+    #     else
+    #         println("No URL found in the input string.")
+    #     end
+
+    # end
+
+
+
+    # ## Filtering Useless Clean URLs
+    # "If it contains 'google' or doesn't equal 200"
+    # for str in clean_URLs
+
+    #     if !occursin("google", str)
+
+    #         try
+    #             if HTTP.status(HTTP.request("GET", str)) == 200
+    #                 push!(filtered_urls, str)
+
+    #             end
+
+    #         catch
+    #             println("Can not access site")
+    #         end
+
+    #     end
+    # end
+
+    
+
+    
+    return dirty_URLs
 end
 
-# PreOrderDFS can be called again to go deeper into node 
-# Recursively enter each node (that may be in a HTMLvector) till there is no children while checking for atags
 
+
+version3(input)
 
 
 # trying yo view the tree
