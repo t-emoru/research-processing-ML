@@ -216,22 +216,6 @@ end
 version3(input)
 
 
-# trying yo view the tree
-
-# how deep does DFS go? - all the way in, so why does it work for google search?
-
-
-"
-potential solutions 
-
-revisit intial code structure in main file
-
-redesign functions from scratch 
-      with DFS (recurrsion)  - SOMMY
-      without DFS ~ (hardcode) - TOMI
-
-
-"
 
 
 
