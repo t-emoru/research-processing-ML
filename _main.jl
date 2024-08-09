@@ -97,6 +97,7 @@ using Dates
 ### SEARCH TESTING
 query = "stock markets most profitable companies"
 
+
 ## - Obtain Search Result URLS
 raw = Search.GOOGLE_search(query, 1)
 raww = Search.STEM_search(query, 3)
@@ -214,6 +215,48 @@ end
 
 
 version3(input)
+
+
+####    Article Sraping Function   #####
+
+function scrape_webpage(url::String; body_text_limit::Int = 2200)
+    # Fetch the webpage content
+    response = HTTP.get(url)
+    html_content = String(response.body)
+    
+    # Parse the HTML content
+    parsed_content = parsehtml(html_content)
+    
+    # Define CSS selectors for headings, titles, and body text
+    selectors = Dict(
+        "titles" => "title, h1, h2, h3, h4, h5, h6",
+        "headings" => "h1, h2, h3, h4, h5, h6",
+        "body" => "p, div"
+    )
+    
+    # Extract the text for each selector
+    extracted_data = Dict{String, Vector{String}}()
+    
+    for (key, selector) in selectors
+        elements = eachmatch(Selector(selector), parsed_content.root)
+        if key == "body"
+            body_text = join([text(node) for node in elements], " ")
+            extracted_data[key] = [body_text[1:min(end, body_text_limit)]]
+        else
+            extracted_data[key] = [text(node) for node in elements]
+        end
+    end
+    
+    return extracted_data
+end
+
+# Example usage
+url = "https://finance.yahoo.com/?guccounter=1&guce_referrer=aHR0cHM6Ly93d3cuYmluZy5jb20v&guce_referrer_sig=AQAAANTxpoSKjEBsXZiD6qTdnC2d4sPzS5ulYZ_LsxqL2yLcPQ67Z066QsbejMnTcgIRu7JCy-q87jXTCyxBEU4epfH0jNoaNmjxkeG5o5dlD8RF4V36c3vY1bcNa0yhR9qkJKDj8C9kFbcDnJX-M0ysqIQh4WXbKMnEkedNPHfAvD8h" 
+scraped_data = scrape_webpage(url)
+
+println("Titles: ", scraped_data["titles"])
+println("Headings: ", scraped_data["headings"])
+println("Body: ", scraped_data["body"])
 
 
 
