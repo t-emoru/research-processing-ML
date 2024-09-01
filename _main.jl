@@ -95,7 +95,7 @@ using Dates
 
 
 ### SEARCH TESTING
-query = "stock markets most profitable companies"
+query = "Types of Cancer"
 
 
 ## - Obtain Search Result URLS
@@ -215,7 +215,7 @@ end
 
 
 version3(input)
-
+show(stdout, "text/plain", version3(input))
 
 ####    Article Sraping Function   #####
 
@@ -258,6 +258,58 @@ println("Titles: ", scraped_data["titles"])
 println("Headings: ", scraped_data["headings"])
 println("Body: ", scraped_data["body"])
 
+
+#########################
+#########################
+using PDFIO
+
+#### Keep getting IOS Stream Iteration Errors #####
+
+# Function to extract text from a PDF and save it to a text file
+function getPDFText(src::String, out::String)
+    # Open the PDF document
+    doc = PDFIO.open(src)
+    
+    # Placeholder for document metadata (if needed)
+    docinfo = "Document metadata could be handled here if needed"
+    
+    # Open the output file for writing
+    open(out, "w") do io
+        # Get the total number of pages in the document
+        npage = length(doc)
+        
+        # Iterate over each page and extract text
+        for i in 1:npage
+            # Get the page
+            page = doc[i]
+            
+            # Extract text from the page
+            page_text = PDFIO.pagecontent(page)
+            
+            # Write the extracted text to the output file
+            if page_text !== nothing  # Ensure the content is not empty
+                write(io, page_text * "\n\n")
+            end
+        end
+    end
+    
+    # Close the document (release resources)
+    PDFIO.close(doc)
+    
+    # Return any metadata or document information (if needed)
+    return docinfo
+end
+
+# Example usage
+pdf_path = raw"C:\Users\chiso\OneDrive\Documents\McMaster Research Coop Summer 2024\Machine Learning Practice\Testing Gorund\Junior Design Competition.pdf"  # Replace with your PDF path
+txt_path = raw"C:\Users\chiso\OneDrive\Documents\McMaster Research Coop Summer 2024\Machine Learning Practice\Testing Gorund\rad.txt"  # Output text file
+doc_info = getPDFText(pdf_path, txt_path)
+
+println("Document metadata/info: ", doc_info)
+println("Text extracted and saved to: ", txt_path)
+
+######################
+######################
 
 
 
