@@ -3,62 +3,6 @@
 #-------------------------------------------------------------------------------
 
 
-"
-Cummulative Algorithm Function:
-    [main CASH ACCOUNTS & subsidiary MARGIN ACCOUNTS for Shorting]
-    *****need margin account for Shorting with Alpaca
-
-    Asynchronous Operation Modes: High Risk & Low Risk
-
-
-    ##LOW RISK - long term holds
-    1. Finding Top Traded Most Profitable Companies
-        i) Search 
-        ii) Srub and produce List of Companies
-            a) Produce List of Articles related to search
-            b) Srub articles for list of companies (and stock name)
-
-        iii) Produce list of news article lists (within set time period) 
-        relating to each company in the list above
-
-
-    2. Finding Top Traded Most Stable Industries 
-        i) Search
-        ii) Srub and produce List of Industries & Commodies to traded 
-        iii) Produce list of news article lists (within set time period) relating to each
-            company in the list above
-
-
-
-    ##HIGH RISK - short term holds [HFT mode on a Timeframe of Seconds to Weeks]
-    3. Finding Volatile Currently high value stock, Swing Trade Stocks and HTF Stocks
-        i) Search
-        ii) Srub and produce List of commodities
-        iii) Produce list of news article lists (within set time period) relating to each
-            company in the list above
-
-    
-    Trading Strategy is developed through processing 3 data streams
-
-    Current Market Data [Previous & Current]: MooMoo, Alpaca
-    Company Financial Data: 
-    Sentiment Data: Google News Search, Reddit
-
-    Trades are executed using: [insert BROKER] API*
-
-
-    The Algorithm then takes the list of companines generated from these two Modes
-    then develops an individual portfolio that rountinely checks the 'required data'
-    to decide wheter to buy, sell or short the traded stock 
-
-    Algorithmically this is done by dynamic readjustments of parameters in base trading
-    model. AND constant retrianing and reapplication of data models. 
-    
-
-
-"
-
-
 
 # Custom Packaging Import
 include("SETUP.jl")
@@ -212,108 +156,139 @@ function version3(body)
     return dirty_URLs
 end
 
+# search url function
+test = Search.url_access("https://ca.news.yahoo.com/netflix-the-deliverance-caleb-mclaughlin-andra-day-and-glenn-close-star-in-lee-daniels-exorcism-film-021720023.html")
 
 
-version3(input)
-show(stdout, "text/plain", version3(input))
 
 ####    Article Sraping Function   #####
 
-function scrape_webpage(url::String; body_text_limit::Int = 2200)
-    # Fetch the webpage content
-    response = HTTP.get(url)
-    html_content = String(response.body)
+function v1scrape_webpage(html_element::HTMLElement{:body})
     
-    # Parse the HTML content
-    parsed_content = parsehtml(html_content)
+
     
     # Define CSS selectors for headings, titles, and body text
     selectors = Dict(
-        "titles" => "title, h1, h2, h3, h4, h5, h6",
-        "headings" => "h1, h2, h3, h4, h5, h6",
-        "body" => "p, div"
+        "titles" => "title",
+        "body" => "p"
     )
     
     # Extract the text for each selector
     extracted_data = Dict{String, Vector{String}}()
     
     for (key, selector) in selectors
-        elements = eachmatch(Selector(selector), parsed_content.root)
+        elements = eachmatch(Selector(selector), html_element)
         if key == "body"
+            # Join all body text elements without limiting their length
             body_text = join([text(node) for node in elements], " ")
-            extracted_data[key] = [body_text[1:min(end, body_text_limit)]]
+            extracted_data[key] = [body_text]
         else
+            # Store titles as a list of strings
             extracted_data[key] = [text(node) for node in elements]
         end
     end
-    
+
     return extracted_data
 end
 
-# Example usage
-url = "https://finance.yahoo.com/?guccounter=1&guce_referrer=aHR0cHM6Ly93d3cuYmluZy5jb20v&guce_referrer_sig=AQAAANTxpoSKjEBsXZiD6qTdnC2d4sPzS5ulYZ_LsxqL2yLcPQ67Z066QsbejMnTcgIRu7JCy-q87jXTCyxBEU4epfH0jNoaNmjxkeG5o5dlD8RF4V36c3vY1bcNa0yhR9qkJKDj8C9kFbcDnJX-M0ysqIQh4WXbKMnEkedNPHfAvD8h" 
-scraped_data = scrape_webpage(url)
-
-println("Titles: ", scraped_data["titles"])
-println("Headings: ", scraped_data["headings"])
-println("Body: ", scraped_data["body"])
-
-
-#########################
-#########################
-using PDFIO
-
-#### Keep getting IOS Stream Iteration Errors #####
-
-# Function to extract text from a PDF and save it to a text file
-function getPDFText(src::String, out::String)
-    # Open the PDF document
-    doc = PDFIO.open(src)
+function v2scrape_webpage(html_element::HTMLElement{:body})
     
-    # Placeholder for document metadata (if needed)
-    docinfo = "Document metadata could be handled here if needed"
+    # Define CSS selectors for titles, body text, and date stamps
+    selectors = Dict(
+        "titles" => "title",
+        "body" => "p",
+        "dates" => "time, .date, .published-date"  # Example selectors for dates
+    )
     
-    # Open the output file for writing
-    open(out, "w") do io
-        # Get the total number of pages in the document
-        npage = length(doc)
+    # Extract the text for each selector
+    extracted_data = Dict{String, Vector{String}}()
+    
+    for (key, selector) in selectors
+        elements = eachmatch(Selector(selector), html_element)
+        if key == "body"
+            # Join all body text elements without limiting their length
+            body_text = join([text(node) for node in elements], " ")
+            extracted_data[key] = [body_text]
+        else
+            # Store other data (titles and dates) as a list of strings
+            extracted_data[key] = [text(node) for node in elements]
+        end
+    end
+
+    return extracted_data
+end
+
+function scrape_webpage(html_element::HTMLElement{:body})
+    
+    # Define CSS selectors for titles, body text, and potential date stamps
+    selectors = Dict(
+        "titles" => "title",
+        "body" => "p",
+        "dates" => "time, .date, .published-date, span, div"  # Added span and div for potential dates
+    )
+    
+    # Function to parse and validate dates from text
+    function extract_dates(texts::Vector{String})
+        dates = []
+        # List of month names to look for
+        month_names = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
         
-        # Iterate over each page and extract text
-        for i in 1:npage
-            # Get the page
-            page = doc[i]
-            
-            # Extract text from the page
-            page_text = PDFIO.pagecontent(page)
-            
-            # Write the extracted text to the output file
-            if page_text !== nothing  # Ensure the content is not empty
-                write(io, page_text * "\n\n")
+        for text in texts
+            for month in month_names
+                if occursin(month, text)
+                    push!(dates, text)
+                    break  # Stop looking for other months once one is found
+                end
+            end
+        end
+        return dates
+    end
+    
+    # Extract the text for each selector
+    extracted_data = Dict{String, Vector{String}}()
+    
+    for (key, selector) in selectors
+        elements = eachmatch(Selector(selector), html_element)
+        texts = [string(text(node)) for node in elements]  # Convert SubString{String} to String
+        
+        if key == "body"
+            # Join all body text elements without limiting their length
+            body_text = join(texts, " ")
+            extracted_data[key] = [body_text]
+        else
+            if key == "dates"
+                # Extract and validate date stamps
+                dates = extract_dates(texts)
+                extracted_data[key] = dates
+            else
+                # Store other data (titles) as a list of strings
+                extracted_data[key] = texts
             end
         end
     end
-    
-    # Close the document (release resources)
-    PDFIO.close(doc)
-    
-    # Return any metadata or document information (if needed)
-    return docinfo
+
+    return extracted_data
 end
 
-# Example usage
-pdf_path = raw"C:\Users\chiso\OneDrive\Documents\McMaster Research Coop Summer 2024\Machine Learning Practice\Testing Gorund\Junior Design Competition.pdf"  # Replace with your PDF path
-txt_path = raw"C:\Users\chiso\OneDrive\Documents\McMaster Research Coop Summer 2024\Machine Learning Practice\Testing Gorund\rad.txt"  # Output text file
-doc_info = getPDFText(pdf_path, txt_path)
 
-println("Document metadata/info: ", doc_info)
-println("Text extracted and saved to: ", txt_path)
 
-######################
-######################
+## - data formatting 
+parsed = parsehtml(String(test))
+input = parsed.root[2]
+
+data = v2scrape_webpage(input) 
+## BEST Wroking version - needs more testing of dates, then include tables and pdfs
 
 
 
 
+## Displaying 
+println("Titles: ", data["titles"])
+println("Body: ", data["body"])
+println("Dates: ", data["dates"])
 
 
 
@@ -321,6 +296,22 @@ println("Text extracted and saved to: ", txt_path)
 
 
 
+
+
+
+
+#---PDF to Text Testing
+pdf_file = "C:\\Users\\Tomi\\Downloads\\New folder\\Resume.pdf"
+out = "C:\\Users\\Tomi\\Downloads\\New folder"
+
+Pkg.add("Taro")
+using Taro
+Taro.init()
+
+
+meta, text = Taro.extract(pdf_file);
+text
+println(text)
 
 
 

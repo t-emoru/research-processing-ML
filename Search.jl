@@ -18,7 +18,7 @@ module Search
     export STEM_search
     export MEDIA_search
     export prompt_gen
-    export request_access
+    export url_access
     
     export TaggedData
     export tagged_print
@@ -65,9 +65,6 @@ module Search
 
     # FUNCTION DEFINITIONS
 
-    function URL_search(query::String)
-        return 0
-    end
 
     function GOOGLE_search(query::String, pages::Int=1)
         "
@@ -252,26 +249,20 @@ module Search
     
     
 
-    function request_access(urls, link)
-        "
-        Function: request to access html data of link
-        Returns: Status (1 meaning Yes) and Response (contains html data)
-        "
+    function url_access(url::String)
+
     
-    
-        subject = urls[link]
-        response = HTTP.request("GET", subject)
+        response = HTTP.request("GET", url)
     
     
         #check is request was successful
         if HTTP.status(response) == 200
-            status = 1
+            return response
         else
             println("Failed to access the website. Status code: ", HTTP.status(response))
         end
     
     
-        return status, response
     end
     
   
