@@ -18,7 +18,7 @@ module Search
     export STEM_search
     export MEDIA_search
     export prompt_gen
-    export url_access
+    export url_search
     
     export TaggedData
     export tagged_print
@@ -249,21 +249,27 @@ module Search
     
     
 
-    function url_access(url::String)
 
     
-        response = HTTP.request("GET", url)
+    function url_search(url::String)
     
+        headers = Dict("User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+        cookiejar = CookieJar()
     
-        #check is request was successful
-        if HTTP.status(response) == 200
-            return response
-        else
-            println("Failed to access the website. Status code: ", HTTP.status(response))
+        try
+            response = HTTP.get(url, headers=headers, cookies=cookiejar)
+            if response.status == 200
+                return response.body
+            else
+                error("Failed to fetch HTML. Status: $(response.status)")
+            end
+        catch e
+            error("An error occurred: $e")
         end
-    
-    
     end
+    
+    
+    
     
   
     #Functions for Financial Data Search

@@ -11,278 +11,163 @@ module Extraction
 
     # EXPORT DEFINITIONS
     export extraction_url
-    export traverse_and_extract_urls
-    export extraction_content
-    export extract_company
-    export extract_c_rank
 
 
 
     # FUNCTION CONSTANTS
+    ## for general Webpages *******
+    
+    function version5(body)
+        # URL Types
+        raw_URLs = []  # contain anchor tags
+        dirty_URLs = []
+
+        for elem in PreOrderDFS(body)
+            try
+                if tag(elem) == :a
+                    push!(raw_URLs, elem)
+
+                    href = getattr(elem, "href")
+
+                    # Filter to only include URLs that contain "http"
+                    if occursin("http", href)
+                        # Find the first occurrence of "http" and remove anything before it
+                        http_range = findfirst("http", href)
+                        if http_range !== nothing
+                            cleaned_href = href[http_range.start:end]  # Use the start of the range
+                            push!(dirty_URLs, cleaned_href)
+                        end
+                    end
+                end
+            catch
+                println("")
+            end
+        end
+
+        return dirty_URLs
+    end
+
+    
+    function version7(body)
+        # URL Types
+        raw_URLs = []  # contain anchor tags
+        dirty_URLs = []
+        relevant_URLs = []
+        cleaned_URLs = []
+    
+        relevant_start_pattern = "/url?esrc=s&"  # Pattern that relevant URLs start with
+        prefix_to_remove = "/url?esrc=s&q=&rct=j&sa=U&url="  # Prefix to remove from each URL
+    
+        for elem in PreOrderDFS(body)
+            try
+                if tag(elem) == :a
+                    push!(raw_URLs, elem)
+                    href = getattr(elem, "href")
+                    push!(dirty_URLs, href)
+                end
+            catch e
+                println("Error processing an element: ", e)  # Improved error handling
+            end
+        end
+    
+        # Filter URLs to include only those starting with the relevant pattern
+        for url in dirty_URLs
+            if startswith(url, relevant_start_pattern)
+                push!(relevant_URLs, url)
+            end
+        end
+    
+        # Remove the specific prefix from each URL
+        prefix_length = length(prefix_to_remove)
+        for url in relevant_URLs
+            if startswith(url, prefix_to_remove)
+                cleaned_url = url[prefix_length + 1:end]  # Remove the prefix
+                # Now, remove everything after the first "&"
+                amp_index = findfirst('&', cleaned_url)
+                if amp_index !== nothing
+                    cleaned_url = cleaned_url[1:amp_index-1]
+                end
+                push!(cleaned_URLs, cleaned_url)
+            end
+        end
+    
+        return cleaned_URLs
+    end
 
 
-    "TRY COMBINING JSON & Cascadia"
 
     # FUNCTION DEFINITIONS  
 
-    function extraction_url(body)
 
-        "
-        Function: extraxts url from html content
-        Return: Clean Urls
-        
-        potentional refinement: import beautifulsoup4 python functions using
-        https://gist.github.com/genkuroki/c26f22d3a06a69f917fc98bb07c5c90c
-        "
+    
+
+    ## function stages
+
+    "returns all URLS" 
+    function version3(body)
 
 
         #URL Types
         raw_URLs = [] # contain anchor tags
         dirty_URLs = []
-        clean_URLs = []
-        filtered_urls = []
-        url_pattern = r"(https?://[^&]+)" # Pattern for cleaning urls
 
 
-        # Acquiring "Dirty" & "raw" URLs
-        " 
-        Optimize: try using the built in 'eachmatch' function
-        "
         for elem in PreOrderDFS(body)
 
             try
-                println(tag(elem))  #  creates tree
+                # println(tag(elem))  -  creates tree
                 if tag(elem) == :a
                     push!(raw_URLs, elem)
 
-                    # href = getattr(elem, "href")
-                    # push!(dirty_URLs, href)
+                    href = getattr(elem, "href")
+                    push!(dirty_URLs, href)
 
 
                 end
 
             catch
-                println("error")
+                println("")
             end
 
         end
 
 
         
-        return raw_URLs
-    end
 
-
-
-    # Remanants [use as referenece in redesigning]
-    function extraction_content(status, response)
-
-        "
-        Function: extracts title data, body data and all tables from html data 
-        Returns:
-            title data --> list [words, sentences]
-            body data --> list [words, sentences]
-            tables --> list [datafrmaes...]
-    
-        "
-    
-        # Initiatisation Library
-        title_sentence = []
-        title_word = []
-        body_sentence = []
-        body_word = []
-        table_list = []
-        df_list = []
-    
-    
-    
-        # Extraction if Access was granted
-        if status == 1
-    
-    
-            html_content = String(HTTP.body(response))
-    
-            ##Packaging Data
-            parsed_article = parsehtml(html_content)
-    
-    
-    
-            ## Finidng words of Title
-            title_sentence = []
-            title_word = []
-            title_element = eachmatch(Selector("title"), parsed_article.root)
-    
-            # Words: Split the text into words using whitespace
-            for element in title_element
-                title = split(text(element), r"\s+")
-                append!(title_word, title)
-            end
-    
-            # Sentences: Split the text into words using whitespace
-            for element in title_element
-                title = split(text(element), r"\.")
-                append!(title_sentence, title)
-            end
-    
-    
-    
-            ## Finding words of Body
-            body_sentence = []
-            body_word = []
-            body_elements = eachmatch(Selector("p"), parsed_article.root)
-    
-            # Words: Split the text into words using whitespace
-            for element in body_elements
-                body = split(text(element), r"\s+") # Split the text into words using whitespace
-                append!(body_word, body)
-            end
-    
-            # Sentences: Split the text into words using whitespace
-            for element in body_elements
-                title = split(text(element), r"\.")  # Split the text at full stops
-                append!(body_sentence, title)
-            end
-    
-    
-    
-    
-            #-----------------------------------------------------------------------------
-            # EXTRACTING TABLES
-            #-----------------------------------------------------------------------------
-    
-    
-            ## Finding Tables
-            body = parsed_article.root[2]
-            table_data_raw = eachmatch(sel"table", body) #returns table data. NOW CLEAN !!
-    
-    
-            #Formatting Rows & Colums
-            ntables = length(table_data_raw)
-            table_list = []
-    
-            for i in range(1, ntables)
-    
-                table = []
-    
-                rows = eachmatch(sel"tr", table_data_raw[i])
-    
-                for row in rows
-                    cells = []
-                    for cell in eachmatch(sel"td", row)
-                        push!(cells, nodeText(cell))
-                    end
-                    push!(table, cells)
-                end
-    
-    
-                table = permutedims(table) #columns format
-                t_table = permutedims(table) #rows format
-    
-                # push!(table_list, [])
-                push!(table_list, t_table)
-    
-            end
-    
-    
-            # Creating DataFrame
-            for i in range(1, length(table_list))
-                table_list[i] = [x for x in table_list[i] if x ≠ []] #removes empty indexes
-    
-                df = DataFrame(table_list[i], :auto)
-                df = permutedims(df)
-    
-                vscodedisplay(df)
-    
-                push!(df_list, df)
-            end
-    
-    
-    
-        else
-            println("Access Denied")
-        end
-    
-    
-        # Output Organisation
-        title_data = [title_word, title_sentence]
-        body_data = [body_word, body_sentence]
-    
-    
-    
-        return title_data, body_data, df_list
-    
-    end
-
-
-    
-    function extract_c_rank(rankings)
-        "
-        Function: produces weighed master ranking from link of companies
-        Returns: company master ranking
         
-        "
-    
-    
-        "from body Information create list of companies in the order they appear
-        Count the number of occurrences of a certain company name 
-        Rank all number 1s first then arrange number 1 based on occurrence 
-        Then repeat for every rank checking
-        make sure there are no repetitions"
-    
-    
-        # -----------------------------------------------------------------------------
-        # Number of Occurrences per String
-        # -----------------------------------------------------------------------------
-    
-        # Create an empty dictionary to store counts
-        record = Dict{String,Int}()
-    
-        # Loop through the nested lists and count occurrences
-        for sublist in rankings
-    
-            flattened_list = vcat(sublist...) #flatten list
-    
-            for item in flattened_list
-                if haskey(record, item)
-    
-                    record[item] += 1
-    
-                else
-                    record[item] = 1
+        return dirty_URLs
+    end
+
+    "retuens only relevnat urls - /url?esrc=s&"
+    function version6(body)
+        # URL Types
+        raw_URLs = []  # contain anchor tags
+        dirty_URLs = []
+        relevant_URLs = []
+
+        relevant_start_pattern = "/url?esrc=s&"  # Pattern that relevant URLs start with
+
+        for elem in PreOrderDFS(body)
+            try
+                if tag(elem) == :a
+                    push!(raw_URLs, elem)
+                    href = getattr(elem, "href")
+                    push!(dirty_URLs, href)
                 end
+            catch
+                println("Error processing an element")  # Improved error handling
             end
         end
-    
-    
-    
-        # -----------------------------------------------------------------------------
-        # Company Rankings from Website
-        # -----------------------------------------------------------------------------
-    
-    
-    
-        # -----------------------------------------------------------------------------
-        # Accounting for Website Traffick 
-        # -----------------------------------------------------------------------------
-    
-        "Accounting for Website Traffick
-        https://www.similarweb.com/
-    
-        decide wether to put here or add to url extractoin output!
-    
-        "
-    
-    
-        # -----------------------------------------------------------------------------
-        # Final Evaluation
-        # -----------------------------------------------------------------------------
-    
-    
-    
-    end
-    
 
-    # for commodities screening use AI API
+        # Filter URLs to include only those starting with the relevant pattern
+        for url in dirty_URLs
+            if startswith(url, relevant_start_pattern)
+                push!(relevant_URLs, url)
+            end
+        end
+
+        return relevant_URLs
+    end
  
 
 end
