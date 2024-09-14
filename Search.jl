@@ -24,7 +24,7 @@ module Search
     export tagged_print
 
 
-    # RELEVANT OBJECTS 
+    # RELEVANT OBJECTS - CHANGE: might have been a waste...
     mutable struct TaggedData
         data::Any
         created_at::Union{DateTime, Nothing}
@@ -47,8 +47,6 @@ module Search
 
 
     end
-        
-    
     function tagged_print(tagged_data::TaggedData)
         println("TaggedData Details:")
         println("  Data: ", length(string(tagged_data.data)) > 10 ? string(tagged_data.data)[1:10] * "..." : tagged_data.data)
@@ -65,7 +63,7 @@ module Search
 
     # FUNCTION DEFINITIONS
 
-
+    "returns google HTML data on given search"
     function GOOGLE_search(query::String, pages::Int=1)
         "
         Function: searches google using default query.
@@ -109,7 +107,7 @@ module Search
 
     end
 
-
+    "returns a list of HTML responses from 3 websites (GScholar, PMed, WOS)"
     function STEM_search(query::String, pages::Int=1)
 
         "
@@ -154,7 +152,7 @@ module Search
 
     end
 
-
+    "returns ... "
     function MEDIA_search(mode::String, query::String, pages::Int=1, limit::Int=25)
 
         "
@@ -250,7 +248,7 @@ module Search
     
 
 
-    
+    "returns HTML Data of given url"
     function url_search(url::String)
     
         headers = Dict("User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")

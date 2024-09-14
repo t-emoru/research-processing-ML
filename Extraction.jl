@@ -8,16 +8,30 @@ module Extraction
     using DataFrames
     using CSV
     using Gumbo
+    using Random
+    using Downloads
+    using DataFrames
+    using Dates
+    using Taro
+
 
     # EXPORT DEFINITIONS
-    export extraction_url
+    export urls_general
+    export urls_google
+    export pdfUrls
+    export pdfDownload
+    export pdfText
+    export scrape_webpage
 
 
 
     # FUNCTION CONSTANTS
-    ## for general Webpages *******
-    
-    function version5(body)
+
+
+    # FUNCTION DEFINITIONS  
+
+    "returns valid urls for webpages"
+    function urls_general(body::HTMLElement)
         # URL Types
         raw_URLs = []  # contain anchor tags
         dirty_URLs = []
@@ -47,8 +61,8 @@ module Extraction
         return dirty_URLs
     end
 
-    
-    function version7(body)
+    "returns urls for google search"
+    function urls_google(body::HTMLElement)
         # URL Types
         raw_URLs = []  # contain anchor tags
         dirty_URLs = []
@@ -94,15 +108,88 @@ module Extraction
         return cleaned_URLs
     end
 
+    "returns pdf urls"
+    function pdfUrls(links::Vector{Any})
+        return filter(link -> occursin("pdf", link), links)
+    end
+    
+    "downloads pdfs"
+    function pdfDownload(url::String, save_path::String = "C:\\Users\\Tomi\\Downloads\\Algorthm\\Resume.pdf")
+        # CHANGE to defult to user's download folder not just yours
 
+        try
+            # Download the file and save it to the specified path
+            Downloads.download(url, save_path)
+            println("PDF downloaded successfully to $save_path")
+        catch e
+            println("Failed to download the PDF: $e")
+        end
+    end
 
-    # FUNCTION DEFINITIONS  
+    "converts pdfs to text"
+    function pdfText(pdf_file::String)
+    
+        Taro.init()
+        meta, text = Taro.extract(pdf_file);
+        return meta, text
+    
+    end 
+    
+    "returns title, body, table and date data from webpage"
+    function scrape_webpage(html_element::HTMLElement)
+    
+        # Define CSS selectors for titles, body text, and date stamps
+        selectors = Dict(
+            "titles" => "title",
+            "body" => "p",
+            "dates" => "time, .date, .published-date"  # Example selectors for dates
+        )
+        
+        # Extract the text for each selector
+        extracted_data = Dict{String, Vector{Any}}()
+        
+        for (key, selector) in selectors
+            elements = eachmatch(Selector(selector), html_element)
+            if key == "body"
+                # Join all body text elements without limiting their length
+                body_text = join([text(node) for node in elements], " ")
+                extracted_data[key] = [body_text]
+            else
+                # Store other data (titles and dates) as a list of strings
+                extracted_data[key] = [text(node) for node in elements]
+            end
+        end
+    
+        # Now, scrape all table data
+        tables = eachmatch(Selector("table"), html_element)
+        table_data = []
+    
+        for table in tables
+            rows = eachmatch(Selector("tr"), table)
+            data = [Vector{String}() for _ in 1:length(rows)]
+            
+            for (i, row) in enumerate(rows)
+                cells = eachmatch(Selector("td, th"), row)
+                data[i] = [text(cell) for cell in cells]
+            end
+            
+            # Convert table data into a DataFrame
+            if !isempty(data) && all(x -> length(x) == length(data[1]), data)
+                df = DataFrame([Symbol("col$i") => [row[i] for row in data] for i in 1:length(data[1])])
+                push!(table_data, df)
+            end
+        end
+    
+        # Add table data as a list of DataFrames in the extracted_data dictionary
+        extracted_data["tables"] = table_data
+        
+        return extracted_data
+    end
 
 
     
 
-    ## function stages
-
+    ## development stages ##
     "returns all URLS" 
     function version3(body)
 
@@ -138,7 +225,7 @@ module Extraction
         return dirty_URLs
     end
 
-    "retuens only relevnat urls - /url?esrc=s&"
+    "returns only relevnat urls - /url?esrc=s&"
     function version6(body)
         # URL Types
         raw_URLs = []  # contain anchor tags
@@ -169,6 +256,33 @@ module Extraction
         return relevant_URLs
     end
  
+    "returns only title, body and date"
+    function v2scrape_webpage(html_element::HTMLElement)
+    
+        # Define CSS selectors for titles, body text, and date stamps
+        selectors = Dict(
+            "titles" => "title",
+            "body" => "p",
+            "dates" => "time, .date, .published-date"  # Example selectors for dates
+        )
+        
+        # Extract the text for each selector
+        extracted_data = Dict{String, Vector{String}}()
+        
+        for (key, selector) in selectors
+            elements = eachmatch(Selector(selector), html_element)
+            if key == "body"
+                # Join all body text elements without limiting their length
+                body_text = join([text(node) for node in elements], " ")
+                extracted_data[key] = [body_text]
+            else
+                # Store other data (titles and dates) as a list of strings
+                extracted_data[key] = [text(node) for node in elements]
+            end
+        end
+    
+        return extracted_data
+    end
 
 end
 

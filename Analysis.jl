@@ -45,7 +45,12 @@ module Analysis
         end
     end
 
-
+    
+    function gen_path_string(length::Int = 5)
+        chars = ['A':'Z'; 'a':'z'; '0':'9']  # Character set (uppercase, lowercase, digits)
+        return join(rand(chars, length))
+    end
+    
 
 
     #-----------------------------------------------------------------------
