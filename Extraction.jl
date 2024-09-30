@@ -116,6 +116,7 @@ module Extraction
     "downloads pdfs"
     function pdfDownload(url::String, save_path::String = "C:\\Users\\Tomi\\Downloads\\Algorthm\\Resume.pdf")
         # CHANGE to defult to user's download folder not just yours
+        # Save_path generated using code function in analysis
 
         try
             # Download the file and save it to the specified path
@@ -129,7 +130,13 @@ module Extraction
     "converts pdfs to text"
     function pdfText(pdf_file::String)
     
-        Taro.init()
+        try
+            Taro.init()
+        
+        catch
+            print("Already Initialized")
+        end 
+        
         meta, text = Taro.extract(pdf_file);
         return meta, text
     

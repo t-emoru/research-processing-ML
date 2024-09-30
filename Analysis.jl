@@ -19,7 +19,7 @@ module Analysis
     #-----------------------------------------------------------------------
 
 
-    function semantic_cleaning(list)
+    function sentiment_data_cleaning(list)
 
         for i in 1:length(list)
             
