@@ -45,7 +45,7 @@ function print_full_strings(strings::Vector{Any})
 end
 
 
-x = Search.url_search("https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=math+of+deep+neural+networks&oq=")
+x = Search.url_search("https://finance.yahoo.com/markets/stocks/gainers/")
 parsed = parsehtml(String(x))
 input = parsed.root
 out = Extraction.scrape_webpage(input)
@@ -83,6 +83,7 @@ print(text)
 # whitespace inbtween punctuationn
 
 
+## look at this...
 function clean_text(input::String)
     # Step 1: Store and remove all URLs
     url_pattern = r"http[s]?://[^\s]+"
@@ -94,7 +95,7 @@ function clean_text(input::String)
 
     # Step 3: Insert spaces before and after any punctuation
     punctuation_pattern = r"([.,!?;:])"  # This pattern matches common punctuation
-    cleaned_input = replace(cleaned_input, punctuation_pattern => s" \\1 ")
+    cleaned_input = replace(cleaned_input, punctuation_pattern => s" \1 ")
 
     # Step 4: Convert all words to lowercase
     cleaned_input = lowercase(cleaned_input)
@@ -157,6 +158,7 @@ end
 
 ## TESTING ## 
 
+count_occurrences(x, "neural")
 count_words(x)
 
 
