@@ -205,10 +205,7 @@ module Analysis
     end
 
 
-    ## Develop term trackers, these functions track frequency of certain terms and that goes into the semantic analysis
 
-
-    # candle stick analysis
 
 
  
