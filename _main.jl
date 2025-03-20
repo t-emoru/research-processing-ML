@@ -121,7 +121,7 @@ print(text) # contains urls
 
 
 " use GPT API"
-" study prompt engineering"
+
 
 ## Word Detection and Frequency
 # ----------------------------------------
