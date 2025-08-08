@@ -31,6 +31,7 @@ using Downloads
 using Random
 using DataFrames
 using TextAnalysis
+using JSON3
 
 
 #-------------------------------------------------------------------------------
@@ -64,13 +65,6 @@ out["tables"]
 vscodedisplay(out["tables"][3])
 println(parsed)
 
-
-
-
-Extraction.pdfDownload(Extraction.pdfUrls(a)[3])
-x, text = Extraction.pdfText("C:\\Users\\Tomi\\Downloads\\Algorthm\\Resume.pdf")
-
-print(text)
 
 
 
@@ -116,17 +110,90 @@ print(text) # contains urls
 
 
 
-## Associated Word Generation
-# ----------------------------------------
+
+# ---------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------
 
 
-" use GPT API"
+function chat_with_openai(prompt::String)
+    api_key = get(ENV, "OPENAI_API_KEY", nothing)
+
+    if api_key === nothing
+        error("OPENAI_API_KEY is not set. Please set it before running this script.")
+    end
+    
+    url = "https://api.openai.com/v1/chat/completions"
+
+    body = Dict(
+        "model" => "gpt-3.5-turbo",
+        "messages" => [
+            Dict("role" => "system", "content" => "You are a helpful assistant."),
+            Dict("role" => "user", "content" => prompt)
+        ]
+    )
+
+    res = HTTP.post(url,
+        ["Authorization" => "Bearer $api_key",
+         "Content-Type" => "application/json"],
+        JSON3.write(body))
+
+    parsed = JSON3.read(String(res.body))
+    return parsed.choices[1].message.content
+end
+
+chat_with_openai("hello")
+
+x, text = Extraction.pdfText("C:\\Users\\Tomi\\Downloads\\Research_Papers\\s40303-015-0010-8.pdf")
+
+typeof(text)
 
 
-## Word Detection and Frequency
-# ----------------------------------------
+"BUILD POOL OF RESEARCH PAPERS"
+#####------------------------------------------------
+## Items of Data Required
 
-# count occurrences of given string
+# Metadata Analysis [no LLM]
+function extract_pdf_metadata(meta::Dict{String, String})
+    return Dict(
+        "Title" => get(meta, "dc:title", get(meta, "title", "N/A")),
+        "Author" => get(meta, "Author", get(meta, "meta:author", "N/A")),
+        "Last Modified" => get(meta, "Last-Modified", get(meta, "pdf:docinfo:modified", "N/A")),
+        "Page Count" => get(meta, "xmpTPg:NPages", "N/A"),
+        "Publishing Website" => get(meta, "pdf:docinfo:custom:CrossMarkDomains[1]", 
+                              get(meta, "pdf:docinfo:custom:CrossMarkDomainExclusive", "N/A"))
+    )
+end
+extract_pdf_metadata(x)
+
+
+# Number of Citations [variable]
+"may require switching scraping approach to API"
+
+
+
+
+# Associated Keywords [LLM]
+function get_associated_words(word::String)
+    prompt = """
+    Act as a word association engine. Given a single input word, return a Julia array of commonly associated terms and short phrases (e.g., co-occurring ideas, functions, tools, fields, use cases). Avoid simple synonyms.
+
+    Respond only with the Julia array of strings, formatted like this: ["item1", "item2", "item3", ...].
+
+    Input word: "$word"
+    Output:
+    """
+
+    response_str = chat_with_openai(prompt)
+    words = collect(JSON3.read(response_str))
+    return words
+end
+p = get_associated_words("robotics")
+
+
+
+# Keyword Frequency [no LLM]
+#----------count occurrences of given string
 function count_occurrences(input::Union{String, Vector{String}}, target::String)
     if isa(input, String)
         return count(x -> x == target, split(input))
@@ -136,9 +203,7 @@ function count_occurrences(input::Union{String, Vector{String}}, target::String)
         error("Input must be a string or a list of strings.")
     end
 end
-
-
-# count occurrences of all words in text
+#----------count occurrences of all words in text
 function count_words(input::String)
     word_counts = Dict{String, Int64}()
     words = split(lowercase(input), r"\W+")
@@ -152,6 +217,47 @@ function count_words(input::String)
     end
     return word_counts
 end
+
+
+
+
+
+# Topic Modelling [LLM]
+ 
+
+
+# Base Relevance Score [no LLM]: score based on frequency and meta data
+
+
+
+#####------------------------------------------------
+## Trend Analysis
+
+""" Citation Network [varaible]: based on lists of citations from different papapers works can be mapped to one 
+another. 
+
+"""
+
+
+""" Gap Identification [LLM]: program is given uncommon words, generates vertically associated words and 
+searches for related article in network (and actively checks in current seraches)
+"""
+
+""" Relevance Score [varaible]: combines all scoring metrics
+
+"""
+
+
+
+
+
+
+
+
+
+## Word Detection and Frequency
+# ----------------------------------------
+
 
 
 

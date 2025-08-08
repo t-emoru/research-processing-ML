@@ -12,6 +12,8 @@ module SETUP
     Pkg.add("TextAnalysis")
     Pkg.add("Dates")
     Pkg.add("Taro")
+    Pkg.add("JSON3")
+
 
 
 end

@@ -114,7 +114,7 @@ module Extraction
     end
     
     "downloads pdfs"
-    function pdfDownload(url::String, save_path::String = "C:\\Users\\Tomi\\Downloads\\Algorthm\\Resume.pdf")
+    function pdfDownload(url::String, save_path::String = "C:\\Users\\Tomi\\Downloads\\Research_Papers\\")
         # CHANGE to defult to user's download folder not just yours
         # Save_path generated using code function in analysis
 
